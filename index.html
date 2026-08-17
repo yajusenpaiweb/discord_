@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discord 20MB メディア圧縮ツール | Discord Media Compressor</title>
+  <meta name="description" content="Discordの最新上限（20MB）に動画・画像・音声をブラウザ上で安全に最適圧縮するWebツール。完全クライアント処理でプライバシー保護。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- Enable Cross-Origin Isolation on GitHub Pages -->
+  <script src="https://cdn.jsdelivr.net/npm/coi-serviceworker/coi-serviceworker.min.js"></script>
+  <!-- Load FFmpeg 0.11.6 (Single-thread and multi-thread compatible) -->
+  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="discord-icon-badge">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Discord 20MB メディア圧縮</h1>
+          <p class="subtitle">Discord最新上限（20MB）に動画・画像・音声を自動最適化</p>
+        </div>
+      </div>
+      <div class="privacy-badge">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+        </svg>
+        <span>ブラウザ内処理・完全安全</span>
+      </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="main-content">
+      <!-- Upload & Configuration Section -->
+      <section class="card upload-section" id="uploadCard">
+        <!-- Drag & Drop Zone -->
+        <div class="dropzone" id="dropZone">
+          <input type="file" id="fileInput" class="file-input" accept="video/*,image/*,audio/*">
+          <div class="dropzone-content">
+            <div class="upload-icon-circle">
+              <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+            </div>
+            <h3>ファイルをドラッグ＆ドロップ</h3>
+            <p class="dropzone-sub">または <span class="browse-btn">ファイルを選択</span></p>
+            <div class="supported-tags">
+              <span class="tag">動画: MP4 / MOV / WebM / AVI / MKV</span>
+              <span class="tag">画像: PNG / JPG / WebP / GIF</span>
+              <span class="tag">音声: MP3 / WAV / M4A / FLAC</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Selected File Meta Panel (Hidden initially) -->
+        <div class="file-meta-panel" id="fileMetaPanel" style="display: none;">
+          <div class="file-meta-header">
+            <div class="file-meta-icon" id="fileTypeIcon">📹</div>
+            <div class="file-meta-info">
+              <h4 id="fileName" class="file-name">sample_video.mp4</h4>
+              <div class="meta-tags">
+                <span class="meta-badge" id="fileSizeBadge">0 MB</span>
+                <span class="meta-badge" id="fileDurationBadge">00:00</span>
+                <span class="meta-badge" id="fileResolutionBadge">1920x1080</span>
+                <span class="meta-badge status-warn" id="fileStatusBadge">⚠️ 20MB超過</span>
+              </div>
+            </div>
+            <button class="btn-icon" id="removeFileBtn" title="ファイルを変更">✕</button>
+          </div>
+
+          <!-- Target Size & Settings Form -->
+          <div class="settings-grid">
+            <div class="setting-group">
+              <label class="setting-label">
+                <span>目標サイズ上限</span>
+                <span class="target-val" id="targetSizeDisplay">20 MB (安全設計: 19.5MB)</span>
+              </label>
+              <div class="preset-buttons">
+                <button type="button" class="preset-btn active" data-size="20">20MB (最新Discord)</button>
+                <button type="button" class="preset-btn" data-size="10">10MB</button>
+                <button type="button" class="preset-btn" data-size="8">8MB (旧枠)</button>
+                <button type="button" class="preset-btn" data-size="custom">カスタム</button>
+              </div>
+              <div class="custom-size-input-wrapper" id="customSizeWrapper" style="display: none;">
+                <input type="number" id="customSizeInput" min="1" max="500" value="20" step="0.5">
+                <span>MB</span>
+              </div>
+            </div>
+
+            <!-- Video Specific Settings -->
+            <div class="setting-group video-only" id="videoSettings">
+              <div class="setting-subgrid">
+                <div>
+                  <label class="setting-label">解像度</label>
+                  <select id="resolutionSelect" class="styled-select">
+                    <option value="auto" selected>自動最適化 (推奨)</option>
+                    <option value="1080">1080p (FHD維持)</option>
+                    <option value="720">720p (HD・軽量)</option>
+                    <option value="480">480p (長時間動画用)</option>
+                    <option value="360">360p (超軽量)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="setting-label">音質</label>
+                  <select id="audioBitrateSelect" class="styled-select">
+                    <option value="128">128 kbps (標準・高音質)</option>
+                    <option value="96" selected>96 kbps (最適バランス)</option>
+                    <option value="64">64 kbps (映像容量優先)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Estimated Output Specs -->
+            <div class="calc-box" id="calcBox">
+              <div class="calc-row">
+                <span>🎯 計算された目標映像ビットレート:</span>
+                <strong id="calcVideoBitrate">-- kbps</strong>
+              </div>
+              <div class="calc-row">
+                <span>💡 推定仕上がりサイズ:</span>
+                <strong id="calcEstSize" class="text-accent">約 19.5 MB (Discord添付確実)</strong>
+              </div>
+            </div>
+
+            <!-- Action Button -->
+            <button type="button" class="btn-primary" id="startCompressBtn">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+              </svg>
+              <span>20MB上限で圧縮を開始する</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Processing State Card (Hidden by default) -->
+      <section class="card progress-section" id="progressCard" style="display: none;">
+        <div class="progress-header">
+          <div class="spinner"></div>
+          <div>
+            <h3 id="progressTitle">メディアを圧縮中...</h3>
+            <p id="progressSubtitle" class="progress-sub">ブラウザ内で安全にエンコードしています（サーバー通信なし）</p>
+          </div>
+        </div>
+
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
+        </div>
+        <div class="progress-meta">
+          <span id="progressPercent">0%</span>
+          <span id="progressDetails">準備中...</span>
+        </div>
+
+        <div class="terminal-log" id="terminalLog">
+          <div class="log-line info">[System] エンジン初期化中...</div>
+        </div>
+
+        <div class="progress-actions">
+          <button class="btn-secondary" id="cancelCompressBtn">キャンセル</button>
+        </div>
+      </section>
+
+      <!-- Result Section (Hidden by default) -->
+      <section class="card result-section" id="resultCard" style="display: none;">
+        <div class="result-header">
+          <div class="success-icon">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+          </div>
+          <div>
+            <h3>圧縮完了！ Discordに添付可能です 🎉</h3>
+            <p class="subtitle">目標の20MB以下に最適化されました</p>
+          </div>
+        </div>
+
+        <!-- Size Comparison Metrics -->
+        <div class="metrics-grid">
+          <div class="metric-card before">
+            <span class="metric-label">圧縮前サイズ</span>
+            <span class="metric-value" id="resOriginalSize">0 MB</span>
+          </div>
+          <div class="metric-arrow">➔</div>
+          <div class="metric-card after">
+            <span class="metric-label">圧縮後サイズ (Discord 20MB制限内)</span>
+            <span class="metric-value text-accent" id="resCompressedSize">0 MB</span>
+            <span class="discord-ready-badge">✅ Discord添付OK</span>
+          </div>
+          <div class="metric-card saved">
+            <span class="metric-label">削減率</span>
+            <span class="metric-value text-success" id="resReduction">0% OFF</span>
+          </div>
+        </div>
+
+        <!-- Preview Area -->
+        <div class="preview-box" id="previewContainer">
+          <!-- Video / Image / Audio dynamic element will be inserted here -->
+        </div>
+
+        <!-- Download & Copy Actions -->
+        <div class="result-actions">
+          <a id="downloadLink" class="btn-primary btn-large" download="discord_compressed.mp4">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/>
+            </svg>
+            <span>圧縮済みファイルをダウンロード</span>
+          </a>
+          <button class="btn-secondary" id="compressAnotherBtn">別のファイルを圧縮</button>
+        </div>
+      </section>
+
+      <!-- Feature Guide & FAQ -->
+      <section class="info-section">
+        <div class="info-grid">
+          <div class="info-card">
+            <div class="info-icon">⚡</div>
+            <h4>なぜ20MB？</h4>
+            <p>Discordの無料プランの添付ファイル制限が<strong>20MB</strong>に変更されました。このツールは20MBを超過する動画や画像を確実に添付できるようにギリギリの高画質で圧縮します。</p>
+          </div>
+          <div class="info-card">
+            <div class="info-icon">🔒</div>
+            <h4>安心の完全クライアント処理</h4>
+            <p>ファイルはお使いのブラウザ内部（WebAssembly / WebCodecs）でのみ処理されます。外部サーバーへのアップロードは一切行われません。</p>
+          </div>
+          <div class="info-card">
+            <div class="info-icon">🎯</div>
+            <h4>高精度ビットレート自動計算</h4>
+            <p>動画の長さに応じて、19.5MB（20MB未満の安全マージン）に収まる最大ビットレートを1秒単位で自動計算してエンコードします。</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Discord Media Compressor • 20MB Optimized for Discord</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
