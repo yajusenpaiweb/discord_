@@ -35,3 +35,9 @@ Discordの最新添付制限（**20MB**）に合わせて、動画・画像・�
 
 - ファイルは外部サーバーに送信されず、お使いの**ブラウザ内部（端末内）**で直接処理されます。
 - 個人動画や機密データも安心してご利用いただけます。
+
+---
+
+<p align="center">
+  <img src="https://count.getloli.com/@yajukafe?name=yajukafe&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="Visitor Counter" />
+</p>
