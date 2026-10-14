@@ -450,6 +450,9 @@ async function compressVideo() {
 
   const ffmpegArgs = [
     '-i', inputName,
+    ...scaleFilter,
+    '-map', '0:v:0',
+    '-map', '0:a?',
     '-c:v', 'libx264',
     '-b:v', `${videoKbps}k`,
     '-maxrate', `${Math.round(videoKbps * 1.3)}k`,
@@ -457,8 +460,9 @@ async function compressVideo() {
     '-preset', 'veryfast',
     '-c:a', 'aac',
     '-b:a', `${audioKbps}k`,
+    '-ac', '2',
+    '-ar', '44100',
     '-movflags', '+faststart',
-    ...scaleFilter,
     outputName
   ];
 
@@ -482,11 +486,10 @@ async function compressVideoFallback() {
   updateProgress(20, 'ブラウザネイティブ録画エンジンで圧縮中...');
   const video = document.createElement('video');
   video.src = URL.createObjectURL(state.file);
-  video.muted = true;
   video.playsInline = true;
+  video.volume = 1;
 
   await new Promise((res) => { video.onloadedmetadata = res; });
-  await video.play();
 
   const canvas = document.createElement('canvas');
   let targetWidth = state.width;
@@ -502,12 +505,35 @@ async function compressVideoFallback() {
   canvas.height = targetHeight;
   const ctx = canvas.getContext('2d');
 
-  const stream = canvas.captureStream(30);
+  // Capture video stream from canvas
+  const canvasStream = canvas.captureStream(30);
+
+  // Capture audio from the video element
+  let combinedStream;
+  try {
+    const audioCtx = new AudioContext();
+    const source = audioCtx.createMediaElementSource(video);
+    const dest = audioCtx.createMediaStreamDestination();
+    source.connect(dest);
+    source.connect(audioCtx.destination); // Also output to speakers so it plays
+
+    // Merge canvas video track + audio track
+    const audioTracks = dest.stream.getAudioTracks();
+    combinedStream = new MediaStream([
+      ...canvasStream.getVideoTracks(),
+      ...audioTracks
+    ]);
+  } catch (e) {
+    // If audio capture fails, use canvas-only stream (no audio)
+    logTerminal('音声キャプチャに失敗、映像のみで処理します', 'info');
+    combinedStream = canvasStream;
+  }
+
   const targetBytes = state.targetMB * 1024 * 1024 * 0.95;
   const totalBitrate = Math.floor((targetBytes * 8) / (state.duration || 30));
 
-  const mediaRecorder = new MediaRecorder(stream, {
-    mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm',
+  const mediaRecorder = new MediaRecorder(combinedStream, {
+    mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus' : 'video/webm',
     videoBitsPerSecond: totalBitrate
   });
 
@@ -522,6 +548,7 @@ async function compressVideoFallback() {
     };
 
     mediaRecorder.start(100);
+    await video.play();
 
     const drawFrame = () => {
       if (video.paused || video.ended) {
