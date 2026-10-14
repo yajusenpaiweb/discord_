@@ -348,8 +348,14 @@ async function getFFmpeg() {
   logTerminal('FFmpeg WebAssembly コアを初期化しています...', 'info');
 
   const ffmpeg = createFFmpeg({
-    log: false,
+    log: true,
     corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
+  });
+
+  ffmpeg.setLogger(({ type, message }) => {
+    if (message) {
+      logTerminal(`[ffmpeg] ${message}`, type === 'fferr' ? 'info' : 'accent');
+    }
   });
 
   ffmpeg.setProgress(({ ratio }) => {
@@ -451,8 +457,6 @@ async function compressVideo() {
   const ffmpegArgs = [
     '-i', inputName,
     ...scaleFilter,
-    '-map', '0:v:0',
-    '-map', '0:a?',
     '-c:v', 'libx264',
     '-b:v', `${videoKbps}k`,
     '-maxrate', `${Math.round(videoKbps * 1.3)}k`,
@@ -463,6 +467,7 @@ async function compressVideo() {
     '-ac', '2',
     '-ar', '44100',
     '-movflags', '+faststart',
+    '-y',
     outputName
   ];
 
